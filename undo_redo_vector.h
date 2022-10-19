@@ -339,7 +339,7 @@ private:
         current_undo_step_group->push_back(step);
     }
 
-    void undo_data(const std::vector<undo_step*> undo_steps, std::vector<TElement>& undoes) const
+    static void undo_data(const std::vector<undo_step*> undo_steps, std::vector<TElement>& undoes)
     {
         for (auto step : undo_steps) {
             switch (step->get_operation_type()) {
