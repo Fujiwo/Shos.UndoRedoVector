@@ -2,11 +2,12 @@
 
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 
 namespace shos {
 
-template <typename TElement>
-class undo_redo_vector
+template <typename TElement, typename TCollection = std::vector<TElement>>
+class undo_redo_collection
 {
     class undo_step
     {
@@ -20,10 +21,10 @@ class undo_redo_vector
         };
 
     private:
-        std::vector<TElement>&  collection;
-        operation_type          operation;
-        size_t                  index;
-        TElement                element;
+        TCollection&   collection;
+        operation_type operation;
+        size_t         index;
+        TElement       element;
         
     public:
         operation_type get_operation_type()
@@ -36,20 +37,20 @@ class undo_redo_vector
             return element;
         }
 
-        static undo_step* add(std::vector<TElement>& collection, TElement element)
+        static undo_step* add(TCollection& collection, TElement element)
         {
             collection.push_back(element);
             return new undo_step(collection, operation_type::add, collection.size() - 1);
         }
 
-        static undo_step* remove(std::vector<TElement>& collection, size_t index)
+        static undo_step* remove(TCollection& collection, size_t index)
         {
             auto element = collection[index];
             collection.erase(collection.begin() + index);
             return new undo_step(collection, operation_type::remove, index, element);
         }
 
-        static undo_step* update(std::vector<TElement>& collection, size_t index, TElement element)
+        static undo_step* update(TCollection& collection, size_t index, TElement element)
         {
             std::swap(element, collection[index]);
             return new undo_step(collection, operation_type::update, index, element);
@@ -86,14 +87,14 @@ class undo_redo_vector
         }
 
     protected:
-        undo_step(std::vector<TElement>& collection, operation_type operation) : collection(collection), operation(operation), index(0), element()
+        undo_step(TCollection& collection, operation_type operation) : collection(collection), operation(operation), index(0), element()
         {}
 
     private:
-        undo_step(std::vector<TElement>& collection, operation_type operation, size_t index) : collection(collection), operation(operation), index(index), element()
+        undo_step(TCollection& collection, operation_type operation, size_t index) : collection(collection), operation(operation), index(index), element()
         {}
 
-        undo_step(std::vector<TElement>& collection, operation_type operation, size_t index, TElement element) : collection(collection), operation(operation), index(index), element(element)
+        undo_step(TCollection& collection, operation_type operation, size_t index, TElement element) : collection(collection), operation(operation), index(index), element(element)
         {}
     };
 
@@ -105,7 +106,7 @@ class undo_redo_vector
         using iterator       = typename std::vector<undo_step*>::iterator;
         using const_iterator = typename std::vector<undo_step*>::const_iterator;
 
-        undo_step_group(std::vector<TElement>& collection) : undo_step(collection, operation_type::group)
+        undo_step_group(TCollection& collection) : undo_step(collection, operation_type::group)
         {}
         
         virtual ~undo_step_group()
@@ -159,20 +160,20 @@ class undo_redo_vector
         }
     };
 
-    std::vector<TElement>   data;
+    TCollection             data;
     
     size_t                  undo_steps_index;
     std::vector<undo_step*> undo_steps;
     undo_step_group*        current_undo_step_group;
 
 public:
-    using iterator       = typename std::vector<TElement>::iterator;
-    using const_iterator = typename std::vector<TElement>::const_iterator;
+    using iterator       = typename TCollection::iterator;
+    using const_iterator = typename TCollection::const_iterator;
 
-    undo_redo_vector() : undo_steps_index(0), current_undo_step_group(nullptr)
+    undo_redo_collection() : undo_steps_index(0), current_undo_step_group(nullptr)
     {}
 
-    virtual ~undo_redo_vector()
+    virtual ~undo_redo_collection()
     {
         reset_undo_steps();
     }
@@ -228,12 +229,14 @@ public:
 
     void erase(const_iterator iterator)
     {
+        //auto step = undo_step::remove(data, iterator - data.begin());
         auto step = undo_step::remove(data, iterator - data.begin());
         push(step);
     }
 
     void update(const_iterator iterator, TElement element)
     {
+        //auto step = undo_step::update(data, iterator - data.begin(), element);
         auto step = undo_step::update(data, iterator - data.begin(), element);
         push(step);
     }
@@ -277,10 +280,10 @@ public:
 
     class transaction
     {
-        undo_redo_vector<TElement>& collection;
+        undo_redo_collection<TElement, TCollection>& collection;
         
     public:
-        transaction(undo_redo_vector<TElement>& collection) : collection(collection)
+        transaction(undo_redo_collection<TElement, TCollection>& collection) : collection(collection)
         {
             collection.begin_transaction();
         }
@@ -295,7 +298,7 @@ private:
     void begin_transaction()
     {
         if (current_undo_step_group != nullptr)
-            throw std::exception();
+            throw std::logic_error("an exception occurred");
 
         current_undo_step_group = new undo_step_group(data);
     }
@@ -303,7 +306,7 @@ private:
     void end_transaction()
     {
         if (current_undo_step_group == nullptr)
-            throw std::exception();
+            throw std::logic_error("an exception occurred");
 
         if (current_undo_step_group->size() == 0)
             delete current_undo_step_group;
@@ -334,7 +337,7 @@ private:
     void push_to_group(undo_step* step)
     {
         if (current_undo_step_group == nullptr)
-            throw std::exception();
+            throw std::logic_error("an exception occurred");
 
         current_undo_step_group->push_back(step);
     }
@@ -365,5 +368,8 @@ private:
         undo_steps_index        = 0;
     }
 };
+
+template <typename TElement>
+using undo_redo_vector = typename undo_redo_collection<TElement>;
 
 } // namespace shos
