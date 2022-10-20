@@ -1,10 +1,13 @@
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "..\undo_redo_vector.h"
+#include "../Shos.MiniCadSample/undo_redo_vector.h"
+#include <vector>
+#include <list>
+#include <iterator>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace ShosUndoRedoVectorTest
+namespace ShosMiniCadSampleTest
 {
     using namespace shos;
 
@@ -23,7 +26,7 @@ namespace ShosUndoRedoVectorTest
             Assert::AreEqual<std::size_t>(6, std::distance(array.begin(), iterator));
             Assert::AreEqual<std::size_t>(6, iterator - array.begin());
         }
-
+        
         TEST_METHOD(check_list)
         {
             std::list<int> array = { 0, 1, 1, 2, 3, 5, 8, 13 };
@@ -109,7 +112,7 @@ namespace ShosUndoRedoVectorTest
             array.push_back(400);
             array.push_back(500);
             array.push_back(700);
-
+            
             Assert::IsTrue(array.can_undo());
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
@@ -199,7 +202,7 @@ namespace ShosUndoRedoVectorTest
         {
             undo_redo_vector<int> array;
             Assert::IsFalse(array.can_redo());
-
+            
             array.push_back(300);
             Assert::IsFalse(array.can_redo());
 

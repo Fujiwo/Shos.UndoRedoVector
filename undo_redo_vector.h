@@ -1,6 +1,8 @@
 #pragma once
 
+#include <iterator>
 #include <vector>
+#include <list>
 #include <algorithm>
 #include <stdexcept>
 
@@ -23,7 +25,7 @@ class undo_redo_collection
     private:
         TCollection&   collection;
         operation_type operation;
-        size_t         index;
+        std::size_t    index;
         TElement       element;
         
     public:
@@ -43,14 +45,14 @@ class undo_redo_collection
             return new undo_step(collection, operation_type::add, collection.size() - 1);
         }
 
-        static undo_step* remove(TCollection& collection, size_t index)
+        static undo_step* remove(TCollection& collection, std::size_t index)
         {
             auto element = collection[index];
             collection.erase(collection.begin() + index);
             return new undo_step(collection, operation_type::remove, index, element);
         }
 
-        static undo_step* update(TCollection& collection, size_t index, TElement element)
+        static undo_step* update(TCollection& collection, std::size_t index, TElement element)
         {
             std::swap(element, collection[index]);
             return new undo_step(collection, operation_type::update, index, element);
@@ -91,10 +93,10 @@ class undo_redo_collection
         {}
 
     private:
-        undo_step(TCollection& collection, operation_type operation, size_t index) : collection(collection), operation(operation), index(index), element()
+        undo_step(TCollection& collection, operation_type operation, std::size_t index) : collection(collection), operation(operation), index(index), element()
         {}
 
-        undo_step(TCollection& collection, operation_type operation, size_t index, TElement element) : collection(collection), operation(operation), index(index), element(element)
+        undo_step(TCollection& collection, operation_type operation, std::size_t index, TElement element) : collection(collection), operation(operation), index(index), element(element)
         {}
     };
 
@@ -227,15 +229,15 @@ public:
         push(step);
     }
 
-    void erase(const_iterator iterator)
+    void erase(iterator iterator)
     {
-        auto step = undo_step::remove(data, iterator - data.begin());
+        auto step = undo_step::remove(data, std::distance(data.begin(), iterator));
         push(step);
     }
 
-    void update(const_iterator iterator, TElement element)
+    void update(iterator iterator, TElement element)
     {
-        auto step = undo_step::update(data, iterator - data.begin(), element);
+        auto step = undo_step::update(data, std::distance(data.begin(), iterator), element);
         push(step);
     }
 
