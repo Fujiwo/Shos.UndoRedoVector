@@ -208,7 +208,8 @@ public:
     virtual ~undo_redo_collection()
     {
         reset_undo_steps();
-        delete clean_up;
+        if (clean_up != nullptr)
+            clean_up_figures();
     }
 
     const TElement& operator[](size_t index) const
@@ -391,6 +392,12 @@ private:
         current_undo_step_group = nullptr;
         undo_steps_index        = 0;
     }
+
+    void clean_up_figures()
+    {
+        std::for_each(this->begin(), this->end(), [&](TElement element) { (*clean_up)(element); });
+        delete clean_up;
+    }
 };
 
 template <typename TElement, typename TCollection = std::vector<TElement*>>
@@ -399,11 +406,6 @@ class undo_redo_pointer_collection : public undo_redo_collection<TElement*, TCol
 public:
     undo_redo_pointer_collection() : undo_redo_collection<TElement*, TCollection>([](TElement* pointer) { delete pointer; })
     {}
-
-    virtual ~undo_redo_pointer_collection()
-    {
-        std::for_each(this->begin(), this->end(), [](TElement* pointer) { delete pointer; });
-    }
 };
 
 template <typename TElement>
