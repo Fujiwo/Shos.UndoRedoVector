@@ -57,8 +57,6 @@ void undo_redo_vector_memory_leak_test()
     array.undo();
     array.redo();
     array.redo();
-
-    std::for_each(array.begin(), array.end(), [](foo* p) { delete p; });
 }
 
 void undo_redo_pointer_vector_memory_leak_test()

@@ -208,8 +208,10 @@ public:
     virtual ~undo_redo_collection()
     {
         reset_undo_steps();
-        if (clean_up != nullptr)
-            clean_up_figures();
+        if (clean_up != nullptr) {
+            clean_up_elements();
+            delete clean_up;
+        }
     }
 
     const TElement& operator[](size_t index) const
@@ -251,7 +253,7 @@ public:
 
     void reset()
     {
-        data.clear();
+        clean_up_elements();
         reset_undo_steps();
     }
 
@@ -393,10 +395,10 @@ private:
         undo_steps_index        = 0;
     }
 
-    void clean_up_figures()
+    void clean_up_elements()
     {
         std::for_each(this->begin(), this->end(), [&](TElement element) { (*clean_up)(element); });
-        delete clean_up;
+        data.clear();
     }
 };
 
