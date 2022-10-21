@@ -42,8 +42,8 @@ class undo_redo_collection
         operation_type                 operation;
         std::size_t                    index;
         TElement                       element;
-        const clean_up_function* const clean_up;
         bool                           hasElement;
+        const clean_up_function* const clean_up;
 
     public:
         operation_type get_operation_type()
