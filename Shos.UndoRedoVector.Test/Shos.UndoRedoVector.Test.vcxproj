@@ -165,7 +165,6 @@
     <ClCompile Include="Shos.UndoRedoVector.Test.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\undo_redo_vector.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

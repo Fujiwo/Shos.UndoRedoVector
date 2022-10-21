@@ -13,6 +13,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shos.UndoRedoVector.MemoryLeakTest", "Shos.UndoRedoVector.MemoryLeakTest\Shos.UndoRedoVector.MemoryLeakTest.vcxproj", "{8EBFF987-3199-42E8-A5F1-D48F78171AC4}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sources", "Sources", "{B4BEB95C-91A7-4572-A1AE-4A2787CF9327}"
+	ProjectSection(SolutionItems) = preProject
+		undo_redo_vector.h = undo_redo_vector.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64

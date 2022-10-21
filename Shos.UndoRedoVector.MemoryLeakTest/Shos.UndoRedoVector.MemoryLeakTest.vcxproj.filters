@@ -23,8 +23,5 @@
     <ClInclude Include="MemoryLeakTest.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\undo_redo_vector.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

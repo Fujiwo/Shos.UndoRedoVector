@@ -1,3 +1,35 @@
+/* Usage:
+
+1. Include "MemoryLeakTest.h" in each source and header.
+2. Call CheckMemoryLeaksStart() at the beginning of main().
+
+// Main.cpp
+#include <iostream>
+#include "MemoryLeakTest.h"
+#include "Sub.h"
+
+int main()
+{
+    CheckMemoryLeaksStart();
+    // ...
+    Sub();
+    // ...
+    return 0;
+}
+
+// Sub.h
+int Sub();
+
+// Sub.cpp
+#include <iostream>
+#include "MemoryLeakTest.h"
+#include "Sub.h"
+int Sub()
+{
+    // ...
+}
+*/
+
 #pragma once
 
 #ifdef _DEBUG
@@ -24,32 +56,3 @@ inline void CheckMemoryLeaksStart()
     _CrtSetDbgFlag(_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG) | _CRTDBG_LEAK_CHECK_DF);
 #endif // _DEBUG
 }
-
-/* Usage:
- 
-// Main.cpp
-#include <iostream>
-// Include "MemoryLeakTest.h" in each source and header.
-#include "MemoryLeakTest.h"
-#include "Sub.h"
-int main()
-{
-    CheckMemoryLeaksStart();
-    // ...
-    Sub();
-    // ...
-    return 0;
-}
-
-// Sub.h
-int Sub();
-
-// Sub.cpp
-#include <iostream>
-#include "MemoryLeakTest.h"
-#include "Sub.h"
-int Sub()
-{
-    // ...
-}
-*/
