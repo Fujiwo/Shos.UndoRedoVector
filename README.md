@@ -9,7 +9,7 @@ vector template class with undo/redo.
 		* redo()
 		* can_redo()
     * undo_redo_pointer_vector
-		Undo / redo vector for pointers that automatically deletes pointers.
+		(Undo / redo vector for pointers that automatically deletes pointers.)
     * Shos.UndoRedoVector.MemoryLeakTest
     * Shos.UndoRedoVector.Test
 		
