@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shos.UndoRedoVector.MemoryLeakTest", "Shos.UndoRedoVector.MemoryLeakTest\Shos.UndoRedoVector.MemoryLeakTest.vcxproj", "{8EBFF987-3199-42E8-A5F1-D48F78171AC4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -27,6 +29,14 @@ Global
 		{2CB1514C-DA37-4EF8-AA64-CBF72F4D3B67}.Release|x64.Build.0 = Release|x64
 		{2CB1514C-DA37-4EF8-AA64-CBF72F4D3B67}.Release|x86.ActiveCfg = Release|Win32
 		{2CB1514C-DA37-4EF8-AA64-CBF72F4D3B67}.Release|x86.Build.0 = Release|Win32
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Debug|x64.ActiveCfg = Debug|x64
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Debug|x64.Build.0 = Debug|x64
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Debug|x86.ActiveCfg = Debug|Win32
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Debug|x86.Build.0 = Debug|Win32
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Release|x64.ActiveCfg = Release|x64
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Release|x64.Build.0 = Release|x64
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Release|x86.ActiveCfg = Release|Win32
+		{8EBFF987-3199-42E8-A5F1-D48F78171AC4}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

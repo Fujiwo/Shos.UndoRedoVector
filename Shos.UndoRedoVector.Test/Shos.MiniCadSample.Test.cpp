@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "../Shos.MiniCadSample/undo_redo_vector.h"
 #include <vector>
 #include <list>
 #include <iterator>
+#include "../Shos.MiniCadSample/undo_redo_vector.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -48,13 +48,13 @@ namespace ShosMiniCadSampleTest
             array.push_back(100);
 
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 100);
+            Assert::AreEqual<int>(array[0], 100);
 
             array.push_back(300);
 
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 300);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 300);
         }
 
         TEST_METHOD(erace)
@@ -72,18 +72,18 @@ namespace ShosMiniCadSampleTest
 
             array.erase(std::next(array.begin(), 1));
             Assert::AreEqual<size_t>(array.size(), 3UL);
-            Assert::AreEqual<size_t>(array[0], 400);
-            Assert::AreEqual<size_t>(array[1], 600);
-            Assert::AreEqual<size_t>(array[2], 700);
+            Assert::AreEqual<int>(array[0], 400);
+            Assert::AreEqual<int>(array[1], 600);
+            Assert::AreEqual<int>(array[2], 700);
 
             array.erase(std::next(array.begin(), 2));
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 400);
-            Assert::AreEqual<size_t>(array[1], 600);
+            Assert::AreEqual<int>(array[0], 400);
+            Assert::AreEqual<int>(array[1], 600);
 
             array.erase(array.begin());
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 600);
+            Assert::AreEqual<int>(array[0], 600);
 
             array.erase(array.begin());
             Assert::AreEqual<size_t>(array.size(), 0UL);
@@ -98,9 +98,9 @@ namespace ShosMiniCadSampleTest
 
             array.update(std::next(array.begin(), 1), 1200);
             Assert::AreEqual<size_t>(array.size(), 3UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 1200);
-            Assert::AreEqual<size_t>(array[2], 400);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 1200);
+            Assert::AreEqual<int>(array[2], 400);
         }
 
         TEST_METHOD(undo_push_back)
@@ -116,12 +116,12 @@ namespace ShosMiniCadSampleTest
             Assert::IsTrue(array.can_undo());
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 400);
-            Assert::AreEqual<size_t>(array[1], 500);
+            Assert::AreEqual<int>(array[0], 400);
+            Assert::AreEqual<int>(array[1], 500);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 400);
+            Assert::AreEqual<int>(array[0], 400);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 0UL);
@@ -132,8 +132,8 @@ namespace ShosMiniCadSampleTest
             array.push_back(1000);
             array.push_back(1100);
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 1000);
-            Assert::AreEqual<size_t>(array[1], 1100);
+            Assert::AreEqual<int>(array[0], 1000);
+            Assert::AreEqual<int>(array[1], 1100);
         }
 
         TEST_METHOD(undo_erase)
@@ -147,9 +147,9 @@ namespace ShosMiniCadSampleTest
             Assert::IsTrue(array.undo());
 
             Assert::AreEqual<size_t>(array.size(), 3UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 200);
-            Assert::AreEqual<size_t>(array[2], 400);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 200);
+            Assert::AreEqual<int>(array[2], 400);
 
             array.erase(std::next(array.begin(), 2));
             array.erase(std::next(array.begin(), 1));
@@ -158,23 +158,23 @@ namespace ShosMiniCadSampleTest
             Assert::IsTrue(array.can_undo());
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 100);
+            Assert::AreEqual<int>(array[0], 100);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 200);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 200);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 3UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 200);
-            Assert::AreEqual<size_t>(array[2], 400);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 200);
+            Assert::AreEqual<int>(array[2], 400);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 200);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 200);
         }
 
         TEST_METHOD(undo_update)
@@ -186,16 +186,16 @@ namespace ShosMiniCadSampleTest
 
             array.update(std::next(array.begin(), 1), 1200);
             Assert::AreEqual<size_t>(array.size(), 3UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 1200);
-            Assert::AreEqual<size_t>(array[2], 400);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 1200);
+            Assert::AreEqual<int>(array[2], 400);
 
             Assert::IsTrue(array.can_undo());
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 3UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 200);
-            Assert::AreEqual<size_t>(array[2], 400);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 200);
+            Assert::AreEqual<int>(array[2], 400);
         }
 
         TEST_METHOD(redo)
@@ -210,47 +210,50 @@ namespace ShosMiniCadSampleTest
             array.push_back(800);
 
             Assert::AreEqual<size_t>(array.size(), 3UL);
-            Assert::AreEqual<size_t>(array[0], 300);
-            Assert::AreEqual<size_t>(array[1], 600);
-            Assert::AreEqual<size_t>(array[2], 800);
+            Assert::AreEqual<int>(array[0], 300);
+            Assert::AreEqual<int>(array[1], 600);
+            Assert::AreEqual<int>(array[2], 800);
 
             array.erase(std::next(array.begin(), 1));
             array.update(array.begin(), 1200);
             array.erase(array.begin());
             array.push_back(1400);
+            array.undo();
+            array.push_back(1400);
+            Assert::IsFalse(array.can_redo());
 
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 800);
-            Assert::AreEqual<size_t>(array[1], 1400);
+            Assert::AreEqual<int>(array[0], 800);
+            Assert::AreEqual<int>(array[1], 1400);
 
             array.undo();
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 800);
+            Assert::AreEqual<int>(array[0], 800);
 
             array.undo();
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 1200);
-            Assert::AreEqual<size_t>(array[1], 800);
+            Assert::AreEqual<int>(array[0], 1200);
+            Assert::AreEqual<int>(array[1], 800);
 
             array.undo();
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 300);
-            Assert::AreEqual<size_t>(array[1], 800);
+            Assert::AreEqual<int>(array[0], 300);
+            Assert::AreEqual<int>(array[1], 800);
 
             Assert::IsTrue(array.can_redo());
             Assert::IsTrue(array.redo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 1200);
-            Assert::AreEqual<size_t>(array[1], 800);
+            Assert::AreEqual<int>(array[0], 1200);
+            Assert::AreEqual<int>(array[1], 800);
 
             Assert::IsTrue(array.redo());
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 800);
+            Assert::AreEqual<int>(array[0], 800);
 
             Assert::IsTrue(array.redo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 800);
-            Assert::AreEqual<size_t>(array[1], 1400);
+            Assert::AreEqual<int>(array[0], 800);
+            Assert::AreEqual<int>(array[1], 1400);
 
             Assert::IsFalse(array.can_redo());
             Assert::IsFalse(array.redo());
@@ -270,16 +273,16 @@ namespace ShosMiniCadSampleTest
             array.erase(array.begin());
 
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 400);
+            Assert::AreEqual<int>(array[0], 400);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 300);
-            Assert::AreEqual<size_t>(array[1], 400);
+            Assert::AreEqual<int>(array[0], 300);
+            Assert::AreEqual<int>(array[1], 400);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 100);
+            Assert::AreEqual<int>(array[0], 100);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 0UL);
@@ -287,23 +290,23 @@ namespace ShosMiniCadSampleTest
 
             Assert::IsTrue(array.redo());
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 100);
+            Assert::AreEqual<int>(array[0], 100);
 
             Assert::IsTrue(array.redo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 300);
-            Assert::AreEqual<size_t>(array[1], 400);
+            Assert::AreEqual<int>(array[0], 300);
+            Assert::AreEqual<int>(array[1], 400);
 
             Assert::IsTrue(array.redo());
             Assert::AreEqual<size_t>(array.size(), 1UL);
-            Assert::AreEqual<size_t>(array[0], 400);
+            Assert::AreEqual<int>(array[0], 400);
 
             Assert::IsFalse(array.can_redo());
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 300);
-            Assert::AreEqual<size_t>(array[1], 400);
+            Assert::AreEqual<int>(array[0], 300);
+            Assert::AreEqual<int>(array[1], 400);
         }
 
         TEST_METHOD(clear)
@@ -317,16 +320,78 @@ namespace ShosMiniCadSampleTest
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 200);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 200);
 
             Assert::IsTrue(array.redo());
             Assert::AreEqual<size_t>(array.size(), 0UL);
 
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(array.size(), 2UL);
-            Assert::AreEqual<size_t>(array[0], 100);
-            Assert::AreEqual<size_t>(array[1], 200);
+            Assert::AreEqual<int>(array[0], 100);
+            Assert::AreEqual<int>(array[1], 200);
+        }
+
+        class foo
+        {
+            int value;
+            
+        public:
+            foo(int value) : value(value) {}
+            operator int() { return value; }
+        };
+        
+        TEST_METHOD(clean_up)
+        {
+            undo_redo_vector<foo*> array;
+
+            array.push_back(new foo(300));
+            array.push_back(new foo(600));
+            array.push_back(new foo(800));
+
+            array.undo();
+
+            array.erase(std::next(array.begin(), 1));
+
+            array.undo();
+            array.redo();
+
+            array.update(array.begin(), new foo(1200));
+
+            array.erase(array.begin());
+            array.push_back(new foo(1400));
+
+            array.undo();
+            array.redo();
+            array.redo();
+
+            std::for_each(array.begin(), array.end(), [](foo* p) { delete p; });
+        }
+
+
+        TEST_METHOD(pointer_vector)
+        {
+            undo_redo_pointer_vector<foo> array;
+
+            array.push_back(new foo(300));
+            array.push_back(new foo(600));
+            array.push_back(new foo(800));
+
+            array.undo();
+
+            array.erase(std::next(array.begin(), 1));
+
+            array.undo();
+            array.redo();
+
+            array.update(array.begin(), new foo(1200));
+
+            array.erase(array.begin());
+            array.push_back(new foo(1400));
+
+            array.undo();
+            array.redo();
+            array.redo();
         }
     };
 }
