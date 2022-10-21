@@ -132,6 +132,7 @@
     <ClCompile Include="Shos.UndoRedoVector.MemoryLeakTest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\undo_redo_vector.h" />
     <ClInclude Include="MemoryLeakTest.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
