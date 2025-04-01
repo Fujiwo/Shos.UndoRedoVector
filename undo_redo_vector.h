@@ -139,7 +139,7 @@ class undo_redo_collection
         
         virtual ~undo_step_group()
         {
-            for_each(undo_steps.begin(), undo_steps.end(), [](undo_step* step) { delete step; });
+            std::for_each(undo_steps.begin(), undo_steps.end(), [](undo_step* step) { delete step; });
         }
 
         virtual const std::vector<undo_step*>* get_data() const override
@@ -179,12 +179,12 @@ class undo_redo_collection
 
         virtual void undo() override
         {
-            for_each(undo_steps.rbegin(), undo_steps.rend(), [](undo_step* step) { step->undo(); });
+            std::for_each(undo_steps.rbegin(), undo_steps.rend(), [](undo_step* step) { step->undo(); });
         }
 
         virtual void redo() override
         {
-            for_each(undo_steps.begin(), undo_steps.end(), [](undo_step* step) { step->undo(); });
+            std::for_each(undo_steps.begin(), undo_steps.end(), [](undo_step* step) { step->undo(); });
         }
     };
 
@@ -353,7 +353,7 @@ private:
     void push_to_steps(undo_step* step)
     {
         if (undo_steps_index != undo_steps.size()) {
-            for_each(undo_steps.begin() + undo_steps_index, undo_steps.end(), [](undo_step* step) { delete step; });
+            std::for_each(undo_steps.begin() + undo_steps_index, undo_steps.end(), [](undo_step* step) { delete step; });
             undo_steps.erase(undo_steps.begin() + undo_steps_index, undo_steps.end());
         }
 
@@ -369,7 +369,7 @@ private:
         current_undo_step_group->push_back(step);
     }
 
-    static void undo_data(const std::vector<undo_step*> undo_steps, std::vector<TElement>& undoes)
+    static void undo_data(const std::vector<undo_step*>& undo_steps, std::vector<TElement>& undoes)
     {
         for (auto step : undo_steps) {
             switch (step->get_operation_type()) {
@@ -387,7 +387,7 @@ private:
 
     void reset_undo_steps()
     {
-        for_each(undo_steps.begin(), undo_steps.end(), [](undo_step* step) { delete step; });
+        std::for_each(undo_steps.begin(), undo_steps.end(), [](undo_step* step) { delete step; });
         undo_steps.clear();
 
         delete current_undo_step_group;
