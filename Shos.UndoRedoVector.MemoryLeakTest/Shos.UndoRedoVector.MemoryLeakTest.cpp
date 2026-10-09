@@ -1,5 +1,6 @@
-﻿#include "MemoryLeakTest.h"
-#include "../undo_redo_vector.h"
+﻿#include "../undo_redo_vector.h"
+// Include after the standard headers, since it redefines new.
+#include "MemoryLeakTest.h"
 
 using namespace shos;
 
@@ -8,8 +9,8 @@ class foo
     int value;
 
 public:
-    foo(int value) : value(value) {}
-    operator int() { return value; }
+    foo(int initial_value) : value(initial_value) {}
+    operator int() const { return value; }
 };
 
 class function_test
@@ -18,7 +19,7 @@ class function_test
     foo* foo1;
 
 public:
-    function_test(std::function<void(foo*)> func) : func(func), foo1(new foo(100))
+    function_test(std::function<void(foo*)> clean_up) : func(clean_up), foo1(new foo(100))
     {}
 
     virtual ~function_test()
@@ -90,4 +91,12 @@ int main()
 
     function_clean_up_test();
     undo_redo_vector_memory_leak_test();
+    undo_redo_pointer_vector_memory_leak_test();
+
+#ifdef _DEBUG
+    // Returns non-zero if any leak is detected, so that the result can be checked automatically.
+    return _CrtDumpMemoryLeaks() ? 1 : 0;
+#else // _DEBUG
+    return 0;
+#endif // _DEBUG
 }

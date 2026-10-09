@@ -1,12 +1,13 @@
 /* Usage:
 
-1. Include "MemoryLeakTest.h" in each source and header.
+1. Include "MemoryLeakTest.h" in each source and header, after all the other headers
+   (it redefines new, which must not be done before including the standard headers).
 2. Call CheckMemoryLeaksStart() at the beginning of main().
 
 // Main.cpp
 #include <iostream>
-#include "MemoryLeakTest.h"
 #include "Sub.h"
+#include "MemoryLeakTest.h"
 
 int main()
 {
@@ -22,8 +23,8 @@ int Sub();
 
 // Sub.cpp
 #include <iostream>
-#include "MemoryLeakTest.h"
 #include "Sub.h"
+#include "MemoryLeakTest.h"
 int Sub()
 {
     // ...
