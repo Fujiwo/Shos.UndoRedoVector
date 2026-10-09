@@ -1,8 +1,10 @@
 #include "pch.h"
 #include "CppUnitTest.h"
+#include <atomic>
 #include <list>
 #include <memory>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include "../undo_redo_vector.h"
 
@@ -652,6 +654,119 @@ namespace ShosUndoRedoVectorTest
                 Assert::AreEqual<int>(5, foo::instance_count);
             }
             Assert::AreEqual<int>(0, foo::instance_count);
+        }
+    };
+
+    TEST_CLASS(synchronized_undo_redo_vector_test)
+    {
+    public:
+        TEST_METHOD(not_copyable_nor_movable)
+        {
+            Assert::IsFalse(std::is_copy_constructible_v<synchronized_undo_redo_vector<int>>);
+            Assert::IsFalse(std::is_move_constructible_v<synchronized_undo_redo_vector<int>>);
+        }
+
+        TEST_METHOD(modify_by_index)
+        {
+            synchronized_undo_redo_vector<int> array;
+            array.push_back(100);
+            array.push_back(300);
+
+            Assert::IsTrue(array.insert(1, 200));
+            Assert::IsFalse(array.insert(4, 400));
+            Assert::IsTrue(array.update(0, 150));
+            Assert::IsFalse(array.update(3, 400));
+            Assert::IsTrue(array.erase(2));
+            Assert::IsFalse(array.erase(2));
+            Assert::IsTrue(array.snapshot() == std::vector<int>{ 150, 200 });
+
+            Assert::IsTrue(array.undo());
+            Assert::IsTrue(array.undo());
+            Assert::IsTrue(array.snapshot() == std::vector<int>{ 100, 200, 300 });
+            Assert::IsTrue(array.redo());
+            Assert::IsTrue(array.snapshot() == std::vector<int>{ 150, 200, 300 });
+        }
+
+        TEST_METHOD(read_by_value)
+        {
+            synchronized_undo_redo_vector<int> array;
+            Assert::IsFalse(array.get(0).has_value());
+            Assert::IsFalse(array.front().has_value());
+            Assert::IsFalse(array.back().has_value());
+
+            array.push_back(100);
+            array.push_back(200);
+            Assert::AreEqual<int>(200, *array.get(1));
+            Assert::IsFalse(array.get(2).has_value());
+            Assert::AreEqual<int>(100, *array.front());
+            Assert::AreEqual<int>(200, *array.back());
+            Assert::AreEqual<int>(300, array.read([](const auto& collection) { return collection[0] + collection[1]; }));
+        }
+
+        TEST_METHOD(modify_is_one_undo_step)
+        {
+            synchronized_undo_redo_vector<int> array;
+            array.push_back(100);
+
+            auto size = array.modify([](auto& collection) {
+                collection.push_back(200);
+                collection.erase(collection.begin());
+                return collection.size();
+            });
+            Assert::AreEqual<size_t>(1, size);
+            Assert::AreEqual<int>(200, *array.get(0));
+
+            Assert::IsTrue(array.undo());
+            Assert::IsTrue(array.snapshot() == std::vector<int>{ 100 });
+
+            // An empty modification does not create an undo step.
+            array.modify([](auto&) {});
+            Assert::IsTrue(array.undo());
+            Assert::IsTrue(array.empty());
+        }
+
+        TEST_METHOD(clear_and_reset)
+        {
+            synchronized_undo_redo_vector<int> array;
+            array.push_back(100);
+            array.push_back(200);
+
+            array.clear();
+            Assert::IsTrue(array.empty());
+            Assert::IsTrue(array.undo());
+            Assert::AreEqual<size_t>(2, array.size());
+
+            array.reset();
+            Assert::IsTrue(array.empty());
+            Assert::IsFalse(array.can_undo());
+            Assert::IsFalse(array.can_redo());
+        }
+
+        TEST_METHOD(concurrent_access)
+        {
+            std::atomic<int> live_count = 0;
+            {
+                synchronized_undo_redo_collection<int*> array([&](int*& element) { delete element; live_count--; });
+                auto make = [&](int value) { live_count++; return new int(value); };
+
+                std::vector<std::thread> threads;
+                for (int thread_index = 0; thread_index < 8; thread_index++) {
+                    threads.emplace_back([&, thread_index] {
+                        for (int index = 0; index < 1000; index++) {
+                            switch ((index + thread_index) % 6) {
+                            case 0: case 1: array.push_back(make(index)); break;
+                            case 2:         array.erase(0); break;
+                            case 3:         array.undo(); break;
+                            case 4:         array.redo(); break;
+                            case 5:         array.modify([&](auto& collection) { collection.push_back(make(index)); collection.push_back(make(index)); }); break;
+                            }
+                        }
+                    });
+                }
+                for (auto& thread : threads)
+                    thread.join();
+            }
+            Assert::AreEqual<int>(0, live_count);
         }
     };
 

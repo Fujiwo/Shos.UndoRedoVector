@@ -15,6 +15,7 @@
 - **トランザクション**: 複数の変更を 1 つのアンドゥ単位にまとめられます (入れ子も可能)。
 - **所有権のサポート**: `undo_redo_pointer_vector<T>` は `T*` の要素を所有し、適切なタイミングで delete します。任意の後始末関数を指定することもできます。
 - **コンテナーの選択**: 既定は `std::vector` ですが、`std::list` も使えます。
+- **スレッドセーフ版**: `synchronized_undo_redo_vector<T>` は複数のスレッドで共有できます。
 - **安全**: 変更処理が例外 (メモリー不足など) を送出した場合でも、コレクションと履歴は変更前の状態のまま保たれます。
 
 ## 動作要件
@@ -198,6 +199,44 @@ values.undo();                             // [1, 2]
 
 同様に、`undo_redo_pointer_collection<T, TCollection>` は `undo_redo_pointer_vector<T>` の一般形です。
 
+### スレッドセーフ版 (`synchronized_undo_redo_vector`)
+
+`synchronized_undo_redo_vector<T>` は、複数のスレッドから同時にアクセスできます。
+参照やイテレーターはほかのスレッドの変更で無効になり得るため、API が `undo_redo_vector<T>` と異なります。
+
+- 要素は**値で**読み取ります (`get`、`front`、`back` は `std::optional<T>` を返し、`snapshot` は全要素のコピーを返します)。
+- 要素は**インデックスで**指定します。`insert` / `erase` / `update` は、インデックスが範囲外なら `false` を返します。
+- `modify(function)` は、ロックを保持したまま複数の変更を **1 つのアンドゥ単位**として適用します。ほかのスレッドの変更が混ざることはありません。
+- `read(function)` は、ロックを保持したまま、コピーせずに要素を読み取ります。
+
+```cpp
+shos::synchronized_undo_redo_vector<std::string> names;
+
+names.push_back("Alice");                     // どのスレッドからでも呼び出せる
+names.insert(0, "Bob");                       // [Bob, Alice]
+std::optional<std::string> first = names.get(0);
+
+names.modify([](auto& collection) {          // collection は undo_redo_vector<std::string>
+    collection.erase(collection.begin());
+    collection.push_back("Carol");
+});                                           // 1 つのアンドゥ単位で [Alice, Carol]
+names.undo();                                 // [Bob, Alice]
+
+auto total_length = names.read([](const auto& collection) {
+    std::size_t length = 0;
+    for (const auto& name : collection)
+        length += name.size();
+    return length;
+});
+```
+
+注意点:
+
+- `read` / `modify` に渡した関数と後始末関数は、ロックを保持したまま呼び出されます。その中から同じ `synchronized_undo_redo_vector` にアクセスしてはいけません (デッドロックします)。また、関数から戻った後に参照やイテレーターを使ってはいけません。
+- アンドゥ履歴は全スレッドで共有されます。`undo()` は、どのスレッドが行ったかに関係なく直前の変更を取り消します。
+- 要素はコピーとして返されます。所有するポインターには、後始末関数付きの生ポインターではなく `std::shared_ptr<const T>` を要素にすることをお勧めします。コピーした生ポインターは、ほかのスレッドによって delete されるおそれがあるためです。
+- コピーもムーブもできません。
+
 ## API リファレンス
 
 ### 型
@@ -209,6 +248,8 @@ values.undo();                             // [1, 2]
 | `undo_redo_collection<T, TCollection = std::vector<T>>` | 内部のコンテナーを指定できる一般形 |
 | `undo_redo_pointer_collection<T, TCollection = std::vector<T*>>` | ポインター版の一般形 |
 | `undo_redo_collection<...>::transaction` | 変更を 1 つのアンドゥ単位にまとめる RAII オブジェクト |
+| `synchronized_undo_redo_vector<T>` | スレッドセーフ版。`synchronized_undo_redo_collection<T>` の別名 |
+| `synchronized_undo_redo_collection<T, TCollection = std::vector<T>>` | スレッドセーフ版の一般形 |
 
 ### メンバー関数
 
@@ -230,12 +271,31 @@ values.undo();                             // [1, 2]
 | `size()` / `empty()` | 要素数 / 空かどうか |
 | `begin()` / `end()` / `cbegin()` / `cend()` | `const_iterator` |
 
+### `synchronized_undo_redo_collection` のメンバー関数
+
+| 関数 | 説明 |
+| --- | --- |
+| `synchronized_undo_redo_collection()` | 空のコレクションを作成 |
+| `synchronized_undo_redo_collection(clean_up_function)` | 後始末関数 `void(T&)` を指定して空のコレクションを作成 |
+| `push_back(element)` | 末尾に要素を追加 |
+| `insert(index, element)` | `index` の前に要素を挿入。`index > size()` なら `false` を返す |
+| `erase(index)` | `index` の要素を削除。範囲外なら `false` を返す |
+| `update(index, element)` | `index` の要素を置き換え。範囲外なら `false` を返す |
+| `modify(function)` | ロック中に `function(undo_redo_collection&)` を 1 つのアンドゥ単位として呼び出し、その結果を返す |
+| `clear()` / `reset()` | `undo_redo_collection` と同じ |
+| `undo()` / `redo()` / `can_undo()` / `can_redo()` | `undo_redo_collection` と同じ |
+| `get(index)` | `index` の要素のコピー。範囲外なら `std::nullopt` |
+| `front()` / `back()` | 先頭 / 末尾の要素のコピー。空なら `std::nullopt` |
+| `snapshot()` | 全要素のコピー (`TCollection`) |
+| `read(function)` | 共有ロック中に `function(const undo_redo_collection&)` を呼び出し、その結果を値で返す |
+| `size()` / `empty()` | 要素数 / 空かどうか |
+
 ## 注意事項
 
 - **読み取り専用のアクセス**: `begin()` / `end()` は `const_iterator` を、`operator[]` は `const` 参照を返します。要素を変更するには `update()` を使ってください。
 - **コピー不可**です。ムーブは可能ですが、トランザクション中にムーブしてはいけません。
 - **例外安全性**: `push_back` / `insert` / `erase` / `update` が例外を送出した場合、コレクションと履歴は変更前のまま保たれます。
-- **スレッドセーフではありません**。複数のスレッドからアクセスする場合は、外部で同期してください。
+- **スレッドセーフ性**: `undo_redo_vector` はスレッドセーフではありません。複数のスレッドからアクセスする場合は `synchronized_undo_redo_vector` を使ってください。
 
 ## リポジトリーの構成
 

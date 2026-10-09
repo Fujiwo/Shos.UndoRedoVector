@@ -5,7 +5,9 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -442,10 +444,184 @@ public:
     {}
 };
 
+// A thread-safe undo_redo_collection: every member function can be called from multiple threads at the same time.
+//
+// - References and iterators would outlive the lock, so elements are read by value (get / front / back / snapshot)
+//   or inside read(function), and specified by index instead of iterator.
+// - modify(function) applies multiple modifications as one undo step while holding the lock,
+//   so modifications from other threads never get mixed into it.
+// - The functions passed to read / modify and the clean_up function are called while the lock is held,
+//   so they must not access this synchronized_undo_redo_collection (that would deadlock).
+// - The undo history is shared by all the threads: undo() undoes the last modification made by any thread.
+// - Neither copyable nor movable.
+template <typename TElement, typename TCollection = std::vector<TElement>>
+class synchronized_undo_redo_collection
+{
+public:
+    using collection_type   = undo_redo_collection<TElement, TCollection>;
+    using value_type        = TElement;
+    using size_type         = std::size_t;
+    using clean_up_function = typename collection_type::clean_up_function;
+
+private:
+    mutable std::shared_mutex mutex;
+    collection_type           collection;
+
+public:
+    synchronized_undo_redo_collection() = default;
+
+    explicit synchronized_undo_redo_collection(clean_up_function function) : collection(std::move(function))
+    {}
+
+    synchronized_undo_redo_collection(const synchronized_undo_redo_collection&)            = delete;
+    synchronized_undo_redo_collection& operator=(const synchronized_undo_redo_collection&) = delete;
+
+    std::optional<TElement> get(std::size_t index) const
+    {
+        std::shared_lock lock(mutex);
+        if (index >= collection.size())
+            return std::nullopt;
+        return collection[index];
+    }
+
+    std::optional<TElement> front() const
+    {
+        std::shared_lock lock(mutex);
+        if (collection.empty())
+            return std::nullopt;
+        return collection.front();
+    }
+
+    std::optional<TElement> back() const
+    {
+        std::shared_lock lock(mutex);
+        if (collection.empty())
+            return std::nullopt;
+        return collection.back();
+    }
+
+    // Returns a copy of all the elements.
+    TCollection snapshot() const
+    {
+        std::shared_lock lock(mutex);
+        return TCollection(collection.begin(), collection.end());
+    }
+
+    std::size_t size() const
+    {
+        std::shared_lock lock(mutex);
+        return collection.size();
+    }
+
+    bool empty() const
+    {
+        std::shared_lock lock(mutex);
+        return collection.empty();
+    }
+
+    // Calls function(const collection_type&) while holding a shared lock, and returns its result.
+    // The result is returned by value so that no reference to the elements escapes the lock.
+    template <typename TFunction>
+    auto read(TFunction&& function) const
+    {
+        std::shared_lock lock(mutex);
+        return std::invoke(std::forward<TFunction>(function), collection);
+    }
+
+    // Calls function(collection_type&) while holding an exclusive lock, and returns its result.
+    // All the modifications made in function become one undo step.
+    // If function throws, the modifications made so far are kept as one undo step, as with transaction.
+    // function must not keep references or iterators to collection_type after it returns.
+    template <typename TFunction>
+    auto modify(TFunction&& function)
+    {
+        std::unique_lock                      lock(mutex);
+        typename collection_type::transaction scope(collection);
+        return std::invoke(std::forward<TFunction>(function), collection);
+    }
+
+    void push_back(TElement element)
+    {
+        std::unique_lock lock(mutex);
+        collection.push_back(std::move(element));
+    }
+
+    // Inserts element before index. Returns false (without changing anything) if index > size().
+    bool insert(std::size_t index, TElement element)
+    {
+        std::unique_lock lock(mutex);
+        if (index > collection.size())
+            return false;
+        collection.insert(std::next(collection.begin(), index), std::move(element));
+        return true;
+    }
+
+    // Returns false (without changing anything) if index >= size().
+    bool erase(std::size_t index)
+    {
+        std::unique_lock lock(mutex);
+        if (index >= collection.size())
+            return false;
+        collection.erase(std::next(collection.begin(), index));
+        return true;
+    }
+
+    // Returns false (without changing anything) if index >= size().
+    bool update(std::size_t index, TElement element)
+    {
+        std::unique_lock lock(mutex);
+        if (index >= collection.size())
+            return false;
+        collection.update(std::next(collection.begin(), index), std::move(element));
+        return true;
+    }
+
+    // Removes all the elements as one undo step.
+    void clear()
+    {
+        std::unique_lock lock(mutex);
+        collection.clear();
+    }
+
+    // Removes all the elements and the undo history. This cannot be undone.
+    void reset()
+    {
+        std::unique_lock lock(mutex);
+        collection.reset();
+    }
+
+    bool undo()
+    {
+        std::unique_lock lock(mutex);
+        return collection.undo();
+    }
+
+    bool redo()
+    {
+        std::unique_lock lock(mutex);
+        return collection.redo();
+    }
+
+    bool can_undo() const
+    {
+        std::shared_lock lock(mutex);
+        return collection.can_undo();
+    }
+
+    bool can_redo() const
+    {
+        std::shared_lock lock(mutex);
+        return collection.can_redo();
+    }
+};
+
 template <typename TElement>
 using undo_redo_vector = undo_redo_collection<TElement>;
 
 template <typename TElement>
 using undo_redo_pointer_vector = undo_redo_pointer_collection<TElement>;
+
+template <typename TElement>
+using synchronized_undo_redo_vector = synchronized_undo_redo_collection<TElement>;
 
 } // namespace shos

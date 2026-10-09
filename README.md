@@ -15,6 +15,7 @@ It is useful for editors, drawing tools, and any application that needs an undo 
 - **Transactions**: group several modifications into a single undo step (nesting supported).
 - **Ownership support**: `undo_redo_pointer_vector<T>` owns `T*` elements and deletes them at the right time, and any custom clean-up function can be given instead.
 - **Choice of container**: `std::vector` by default; `std::list` can also be used.
+- **Thread-safe version**: `synchronized_undo_redo_vector<T>` can be shared by multiple threads.
 - **Safe**: if a modification throws (e.g. out of memory), the collection and its history are left unchanged.
 
 ## Requirements
@@ -198,6 +199,44 @@ values.undo();                             // [1, 2]
 
 Likewise, `undo_redo_pointer_collection<T, TCollection>` is the general form of `undo_redo_pointer_vector<T>`.
 
+### Thread-safe version (`synchronized_undo_redo_vector`)
+
+`synchronized_undo_redo_vector<T>` can be accessed from multiple threads at the same time.
+Since a reference or an iterator could be invalidated by another thread, its API differs from `undo_redo_vector<T>`:
+
+- Elements are read **by value** (`get`, `front`, `back` return `std::optional<T>`; `snapshot` returns a copy of all the elements).
+- Elements are specified **by index**. `insert` / `erase` / `update` return `false` if the index is out of range.
+- `modify(function)` applies several modifications as **one undo step** while holding the lock, so modifications from other threads never get mixed into it.
+- `read(function)` reads the elements while holding the lock, without copying them.
+
+```cpp
+shos::synchronized_undo_redo_vector<std::string> names;
+
+names.push_back("Alice");                     // can be called from any thread
+names.insert(0, "Bob");                       // [Bob, Alice]
+std::optional<std::string> first = names.get(0);
+
+names.modify([](auto& collection) {          // collection is an undo_redo_vector<std::string>
+    collection.erase(collection.begin());
+    collection.push_back("Carol");
+});                                           // [Alice, Carol] as one undo step
+names.undo();                                 // [Bob, Alice]
+
+auto total_length = names.read([](const auto& collection) {
+    std::size_t length = 0;
+    for (const auto& name : collection)
+        length += name.size();
+    return length;
+});
+```
+
+Notes:
+
+- The functions passed to `read` / `modify` and the clean-up function are called while the lock is held. They must not access the same `synchronized_undo_redo_vector` (that would deadlock), and must not keep references or iterators after they return.
+- The undo history is shared by all the threads: `undo()` undoes the last modification made by any thread.
+- An element is returned as a copy, so for owned pointers prefer `std::shared_ptr<const T>` elements to raw pointers with a clean-up function: a copied raw pointer could be deleted by another thread.
+- Not copyable nor movable.
+
 ## API Reference
 
 ### Types
@@ -209,6 +248,8 @@ Likewise, `undo_redo_pointer_collection<T, TCollection>` is the general form of 
 | `undo_redo_collection<T, TCollection = std::vector<T>>` | General form, with the underlying container specified |
 | `undo_redo_pointer_collection<T, TCollection = std::vector<T*>>` | General form of the pointer version |
 | `undo_redo_collection<...>::transaction` | RAII object that groups modifications into one undo step |
+| `synchronized_undo_redo_vector<T>` | Thread-safe version. Alias of `synchronized_undo_redo_collection<T>` |
+| `synchronized_undo_redo_collection<T, TCollection = std::vector<T>>` | General form of the thread-safe version |
 
 ### Member functions
 
@@ -230,12 +271,31 @@ Likewise, `undo_redo_pointer_collection<T, TCollection>` is the general form of 
 | `size()` / `empty()` | Number of elements / whether empty |
 | `begin()` / `end()` / `cbegin()` / `cend()` | `const_iterator`s |
 
+### Member functions of `synchronized_undo_redo_collection`
+
+| Function | Description |
+| --- | --- |
+| `synchronized_undo_redo_collection()` | Creates an empty collection |
+| `synchronized_undo_redo_collection(clean_up_function)` | Creates an empty collection with a clean-up function `void(T&)` |
+| `push_back(element)` | Adds an element at the end |
+| `insert(index, element)` | Inserts an element before `index`. Returns `false` if `index > size()` |
+| `erase(index)` | Removes the element at `index`. Returns `false` if out of range |
+| `update(index, element)` | Replaces the element at `index`. Returns `false` if out of range |
+| `modify(function)` | Calls `function(undo_redo_collection&)` under the lock as one undo step, and returns its result |
+| `clear()` / `reset()` | Same as `undo_redo_collection` |
+| `undo()` / `redo()` / `can_undo()` / `can_redo()` | Same as `undo_redo_collection` |
+| `get(index)` | Copy of the element at `index`, or `std::nullopt` if out of range |
+| `front()` / `back()` | Copy of the first / last element, or `std::nullopt` if empty |
+| `snapshot()` | Copy of all the elements (`TCollection`) |
+| `read(function)` | Calls `function(const undo_redo_collection&)` under a shared lock, and returns its result by value |
+| `size()` / `empty()` | Number of elements / whether empty |
+
 ## Notes
 
 - **Read-only access**: `begin()` / `end()` return `const_iterator`, and `operator[]` returns a `const` reference. Use `update()` to change an element.
 - **Not copyable**. Movable, but must not be moved during a transaction.
 - **Exception safety**: if `push_back` / `insert` / `erase` / `update` throws, the collection and its history are left unchanged.
-- **Not thread-safe**: synchronize externally when accessed from multiple threads.
+- **Thread safety**: `undo_redo_vector` is not thread-safe. Use `synchronized_undo_redo_vector` when accessed from multiple threads.
 
 ## Repository Structure
 
