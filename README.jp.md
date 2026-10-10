@@ -20,7 +20,11 @@
 
 ## 動作要件
 
-- C++17 以降 (`std::optional` を使用しているため)
+- C++17 以降。ライブラリーでは次の C++17 の機能を使用しています。
+  - `std::optional` (アンドゥステップが保持する要素、スレッドセーフ版の `get` / `front` / `back` の戻り値)
+  - `std::shared_mutex` / `std::shared_lock` / `std::scoped_lock` (スレッドセーフ版)
+  - `[[nodiscard]]` (読み取り専用のメンバー関数)
+  - クラステンプレートの実引数推論、`std::invoke`、`std::is_..._v` 変数テンプレートなど
 - 標準ライブラリーのみを使用しています。標準に準拠したコンパイラー (MSVC、GCC、Clang) で動作します。
 
 ## 導入方法
@@ -116,7 +120,7 @@ if (values.can_redo()) { /* ... */ }     // リドゥできるものがあれば
 ```cpp
 values.undo();          // [100, 200, 300]
 values.push_back(400);  // [100, 200, 300, 400]
-values.can_redo();      // false
+bool redoable = values.can_redo();   // false
 ```
 
 ### 複数の変更を 1 回のアンドゥにまとめる (トランザクション)
@@ -295,6 +299,7 @@ auto total_length = names.read([](const auto& collection) {
 - **読み取り専用のアクセス**: `begin()` / `end()` は `const_iterator` を、`operator[]` は `const` 参照を返します。要素を変更するには `update()` を使ってください。
 - **コピー不可**です。ムーブは可能ですが、トランザクション中にムーブしてはいけません。
 - **例外安全性**: `push_back` / `insert` / `erase` / `update` が例外を送出した場合、コレクションと履歴は変更前のまま保たれます。
+- **`[[nodiscard]]`**: `size()`、`empty()`、`at()`、`can_undo()`、`get()`、`snapshot()` などの読み取り専用のメンバー関数には `[[nodiscard]]` が付いているため、戻り値を無視するとコンパイラーが警告を出します。`undo()` / `redo()` には付いていないため、戻り値を無視してもかまいません。
 - **スレッドセーフ性**: `undo_redo_vector` はスレッドセーフではありません。複数のスレッドからアクセスする場合は `synchronized_undo_redo_vector` を使ってください。
 
 ## リポジトリーの構成
@@ -304,7 +309,7 @@ auto total_length = names.read([](const auto& collection) {
 | [`undo_redo_vector.h`](undo_redo_vector.h) | ライブラリー本体 (必要なのはこのファイルだけ) |
 | `Shos.UndoRedoVector.Test/` | 単体テスト (Microsoft C++ Unit Test Framework) |
 | `Shos.UndoRedoVector.MemoryLeakTest/` | メモリーリークのテスト (MSVC CRT デバッグヒープ) |
-| `Shos.UndoRedoVector.sln` | テスト用の Visual Studio ソリューション |
+| `Shos.UndoRedoVector.sln` | テスト用の Visual Studio ソリューション (すべての構成を C++17 (`/std:c++17`) でビルド) |
 
 ## テストの実行
 

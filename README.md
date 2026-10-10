@@ -20,7 +20,11 @@ It is useful for editors, drawing tools, and any application that needs an undo 
 
 ## Requirements
 
-- C++17 or later (the library uses `std::optional`)
+- C++17 or later. The library uses these C++17 features:
+  - `std::optional` (elements held by undo steps, and the results of `get` / `front` / `back` of the thread-safe version)
+  - `std::shared_mutex` / `std::shared_lock` / `std::scoped_lock` (thread-safe version)
+  - `[[nodiscard]]` (read-only member functions)
+  - Class template argument deduction, `std::invoke`, `std::is_..._v` variable templates, etc.
 - Only the standard library is needed. It works with any standard-conforming compiler (MSVC, GCC, Clang).
 
 ## Installation
@@ -116,7 +120,7 @@ Like most applications, **any modification after `undo()` discards the redo hist
 ```cpp
 values.undo();          // [100, 200, 300]
 values.push_back(400);  // [100, 200, 300, 400]
-values.can_redo();      // false
+bool redoable = values.can_redo();   // false
 ```
 
 ### Grouping modifications into one undo step (transaction)
@@ -295,6 +299,7 @@ Notes:
 - **Read-only access**: `begin()` / `end()` return `const_iterator`, and `operator[]` returns a `const` reference. Use `update()` to change an element.
 - **Not copyable**. Movable, but must not be moved during a transaction.
 - **Exception safety**: if `push_back` / `insert` / `erase` / `update` throws, the collection and its history are left unchanged.
+- **`[[nodiscard]]`**: read-only member functions such as `size()`, `empty()`, `at()`, `can_undo()`, `get()` and `snapshot()` are marked `[[nodiscard]]`, so ignoring their results causes a compiler warning. `undo()` / `redo()` are not, so their results may be ignored.
 - **Thread safety**: `undo_redo_vector` is not thread-safe. Use `synchronized_undo_redo_vector` when accessed from multiple threads.
 
 ## Repository Structure
@@ -304,7 +309,7 @@ Notes:
 | [`undo_redo_vector.h`](undo_redo_vector.h) | The library (this single file is all you need) |
 | `Shos.UndoRedoVector.Test/` | Unit tests (Microsoft C++ Unit Test Framework) |
 | `Shos.UndoRedoVector.MemoryLeakTest/` | Memory leak test (MSVC CRT debug heap) |
-| `Shos.UndoRedoVector.sln` | Visual Studio solution for the tests |
+| `Shos.UndoRedoVector.sln` | Visual Studio solution for the tests (all configurations are built as C++17: `/std:c++17`) |
 
 ## Running the Tests
 
