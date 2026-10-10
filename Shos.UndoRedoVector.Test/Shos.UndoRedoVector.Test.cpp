@@ -73,7 +73,7 @@ namespace ShosUndoRedoVectorTest
             array.push_back(100);
 
             Assert::AreEqual<int>(100, array.at(0));
-            Assert::ExpectException<std::out_of_range>([&] { array.at(1); });
+            Assert::ExpectException<std::out_of_range>([&] { static_cast<void>(array.at(1)); });
         }
 
         TEST_METHOD(insert)

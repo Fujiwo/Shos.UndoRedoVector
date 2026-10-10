@@ -239,54 +239,54 @@ public:
         clean_up_all();
     }
 
-    const_reference operator[](std::size_t index) const
+    [[nodiscard]] const_reference operator[](std::size_t index) const
     {
         return *std::next(data.begin(), index);
     }
 
-    const_reference at(std::size_t index) const
+    [[nodiscard]] const_reference at(std::size_t index) const
     {
         if (index >= data.size())
             throw std::out_of_range("undo_redo_collection::at: index out of range");
         return (*this)[index];
     }
 
-    const_reference front() const
+    [[nodiscard]] const_reference front() const
     {
         return data.front();
     }
 
-    const_reference back() const
+    [[nodiscard]] const_reference back() const
     {
         return data.back();
     }
 
-    std::size_t size() const
+    [[nodiscard]] std::size_t size() const
     {
         return data.size();
     }
 
-    bool empty() const
+    [[nodiscard]] bool empty() const
     {
         return data.empty();
     }
 
-    const_iterator begin() const
+    [[nodiscard]] const_iterator begin() const
     {
         return data.cbegin();
     }
 
-    const_iterator end() const
+    [[nodiscard]] const_iterator end() const
     {
         return data.cend();
     }
 
-    const_iterator cbegin() const
+    [[nodiscard]] const_iterator cbegin() const
     {
         return data.cbegin();
     }
 
-    const_iterator cend() const
+    [[nodiscard]] const_iterator cend() const
     {
         return data.cend();
     }
@@ -348,17 +348,17 @@ public:
         return true;
     }
 
-    bool can_undo() const
+    [[nodiscard]] bool can_undo() const
     {
         return !in_transaction() && undo_steps_index != 0;
     }
 
-    bool can_redo() const
+    [[nodiscard]] bool can_redo() const
     {
         return !in_transaction() && undo_steps_index != undo_steps.size();
     }
 
-    bool in_transaction() const
+    [[nodiscard]] bool in_transaction() const
     {
         return transaction_depth != 0;
     }
@@ -476,7 +476,7 @@ public:
     synchronized_undo_redo_collection(const synchronized_undo_redo_collection&)            = delete;
     synchronized_undo_redo_collection& operator=(const synchronized_undo_redo_collection&) = delete;
 
-    std::optional<TElement> get(std::size_t index) const
+    [[nodiscard]] std::optional<TElement> get(std::size_t index) const
     {
         std::shared_lock lock(mutex);
         if (index >= collection.size())
@@ -484,7 +484,7 @@ public:
         return collection[index];
     }
 
-    std::optional<TElement> front() const
+    [[nodiscard]] std::optional<TElement> front() const
     {
         std::shared_lock lock(mutex);
         if (collection.empty())
@@ -492,7 +492,7 @@ public:
         return collection.front();
     }
 
-    std::optional<TElement> back() const
+    [[nodiscard]] std::optional<TElement> back() const
     {
         std::shared_lock lock(mutex);
         if (collection.empty())
@@ -501,19 +501,19 @@ public:
     }
 
     // Returns a copy of all the elements.
-    TCollection snapshot() const
+    [[nodiscard]] TCollection snapshot() const
     {
         std::shared_lock lock(mutex);
         return TCollection(collection.begin(), collection.end());
     }
 
-    std::size_t size() const
+    [[nodiscard]] std::size_t size() const
     {
         std::shared_lock lock(mutex);
         return collection.size();
     }
 
-    bool empty() const
+    [[nodiscard]] bool empty() const
     {
         std::shared_lock lock(mutex);
         return collection.empty();
@@ -535,21 +535,21 @@ public:
     template <typename TFunction>
     auto modify(TFunction&& function)
     {
-        std::unique_lock                      lock(mutex);
+        std::scoped_lock                      lock(mutex);
         typename collection_type::transaction scope(collection);
         return std::invoke(std::forward<TFunction>(function), collection);
     }
 
     void push_back(TElement element)
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         collection.push_back(std::move(element));
     }
 
     // Inserts element before index. Returns false (without changing anything) if index > size().
     bool insert(std::size_t index, TElement element)
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         if (index > collection.size())
             return false;
         collection.insert(std::next(collection.begin(), index), std::move(element));
@@ -559,7 +559,7 @@ public:
     // Returns false (without changing anything) if index >= size().
     bool erase(std::size_t index)
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         if (index >= collection.size())
             return false;
         collection.erase(std::next(collection.begin(), index));
@@ -569,7 +569,7 @@ public:
     // Returns false (without changing anything) if index >= size().
     bool update(std::size_t index, TElement element)
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         if (index >= collection.size())
             return false;
         collection.update(std::next(collection.begin(), index), std::move(element));
@@ -579,36 +579,36 @@ public:
     // Removes all the elements as one undo step.
     void clear()
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         collection.clear();
     }
 
     // Removes all the elements and the undo history. This cannot be undone.
     void reset()
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         collection.reset();
     }
 
     bool undo()
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         return collection.undo();
     }
 
     bool redo()
     {
-        std::unique_lock lock(mutex);
+        std::scoped_lock lock(mutex);
         return collection.redo();
     }
 
-    bool can_undo() const
+    [[nodiscard]] bool can_undo() const
     {
         std::shared_lock lock(mutex);
         return collection.can_undo();
     }
 
-    bool can_redo() const
+    [[nodiscard]] bool can_redo() const
     {
         std::shared_lock lock(mutex);
         return collection.can_redo();
