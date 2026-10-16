@@ -14,6 +14,7 @@ namespace ShosUndoRedoVectorTest
 {
     using namespace shos;
 
+    // Tests of undo_redo_collection / undo_redo_pointer_collection (single-threaded).
     TEST_CLASS(undo_redo_vector_test)
     {
         // Counts the live instances to detect leaks and double deletes.
@@ -30,6 +31,7 @@ namespace ShosUndoRedoVectorTest
         };
 
     public:
+        // Runs before each test method, so that every test starts counting from zero.
         TEST_METHOD_INITIALIZE(initialize)
         {
             foo::instance_count = 0;
@@ -73,6 +75,7 @@ namespace ShosUndoRedoVectorTest
             array.push_back(100);
 
             Assert::AreEqual<int>(100, array.at(0));
+            // The cast discards the [[nodiscard]] result without a warning.
             Assert::ExpectException<std::out_of_range>([&] { static_cast<void>(array.at(1)); });
         }
 
@@ -187,11 +190,13 @@ namespace ShosUndoRedoVectorTest
             array.erase(std::next(array.begin(), 1));
             Assert::IsTrue(array.undo());
 
+            // The erased element comes back at its original position.
             Assert::AreEqual<size_t>(3, array.size());
             Assert::AreEqual<int>(100, array[0]);
             Assert::AreEqual<int>(200, array[1]);
             Assert::AreEqual<int>(400, array[2]);
 
+            // Erases all three, then undoes them one by one in reverse order.
             array.erase(std::next(array.begin(), 2));
             array.erase(std::next(array.begin(), 1));
             array.erase(array.begin());
@@ -212,6 +217,7 @@ namespace ShosUndoRedoVectorTest
             Assert::AreEqual<int>(200, array[1]);
             Assert::AreEqual<int>(400, array[2]);
 
+            // Undoes the last push_back (of 400).
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(2, array.size());
             Assert::AreEqual<int>(100, array[0]);
@@ -258,12 +264,13 @@ namespace ShosUndoRedoVectorTest
             Assert::AreEqual<int>(600, array[1]);
             Assert::AreEqual<int>(800, array[2]);
 
-            array.erase(std::next(array.begin(), 1));
-            array.update(array.begin(), 1200);
-            array.erase(array.begin());
-            array.push_back(1400);
-            array.undo();
-            array.push_back(1400);
+            array.erase(std::next(array.begin(), 1)); // { 300, 800 }
+            array.update(array.begin(), 1200);        // { 1200, 800 }
+            array.erase(array.begin());               // { 800 }
+            array.push_back(1400);                    // { 800, 1400 }
+            array.undo();                             // { 800 }
+            // A new modification discards the step that could have been redone.
+            array.push_back(1400);                    // { 800, 1400 }
             Assert::IsFalse(array.can_redo());
 
             Assert::AreEqual<size_t>(2, array.size());
@@ -307,14 +314,15 @@ namespace ShosUndoRedoVectorTest
         {
             undo_redo_vector<int> array;
 
-            array.push_back(100);
+            array.push_back(100);                         // { 100 }
             {
+                // These three modifications become one undo step.
                 undo_redo_vector<int>::transaction transaction(array);
-                array.push_back(300);
-                array.push_back(400);
-                array.erase(array.begin());
+                array.push_back(300);                     // { 100, 300 }
+                array.push_back(400);                     // { 100, 300, 400 }
+                array.erase(array.begin());               // { 300, 400 }
             }
-            array.erase(array.begin());
+            array.erase(array.begin());                   // { 400 }
 
             Assert::AreEqual<size_t>(1, array.size());
             Assert::AreEqual<int>(400, array[0]);
@@ -324,6 +332,7 @@ namespace ShosUndoRedoVectorTest
             Assert::AreEqual<int>(300, array[0]);
             Assert::AreEqual<int>(400, array[1]);
 
+            // Undoes the whole transaction at once.
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(1, array.size());
             Assert::AreEqual<int>(100, array[0]);
@@ -361,6 +370,7 @@ namespace ShosUndoRedoVectorTest
                 undo_redo_vector<int>::transaction transaction(array);
             }
 
+            // The empty transaction created no undo step, so undo() reverts the push_back.
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(0, array.size());
             Assert::IsFalse(array.can_undo());
@@ -382,6 +392,7 @@ namespace ShosUndoRedoVectorTest
             Assert::IsFalse(array.in_transaction());
             Assert::AreEqual<size_t>(3, array.size());
 
+            // Only the outer transaction created an undo step, which contains all three push_backs.
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(0, array.size());
             Assert::IsFalse(array.can_undo());
@@ -395,10 +406,11 @@ namespace ShosUndoRedoVectorTest
             undo_redo_vector<int> array;
             array.push_back(100);
             array.push_back(200);
-            array.undo();
+            array.undo();                                 // { 100 }, push_back(200) can be redone.
             {
                 undo_redo_vector<int>::transaction transaction(array);
                 array.push_back(300);
+                // undo / redo are disabled until the transaction ends.
                 Assert::IsFalse(array.can_undo());
                 Assert::IsFalse(array.can_redo());
                 Assert::IsFalse(array.undo());
@@ -407,6 +419,7 @@ namespace ShosUndoRedoVectorTest
             Assert::AreEqual<size_t>(2, array.size());
             Assert::AreEqual<int>(100, array[0]);
             Assert::AreEqual<int>(300, array[1]);
+            // The transaction discarded the redo step of push_back(200).
             Assert::IsFalse(array.can_redo());
 
             Assert::IsTrue(array.undo());
@@ -424,6 +437,7 @@ namespace ShosUndoRedoVectorTest
             array.clear();
             Assert::AreEqual<size_t>(0, array.size());
 
+            // clear() is a single undo step, so one undo() restores all the elements.
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(2, array.size());
             Assert::AreEqual<int>(100, array[0]);
@@ -443,10 +457,11 @@ namespace ShosUndoRedoVectorTest
             undo_redo_vector<int> array;
             array.push_back(100);
             {
+                // clear() inside a transaction is merged into the same undo step.
                 undo_redo_vector<int>::transaction transaction(array);
-                array.push_back(200);
-                array.clear();
-                array.push_back(300);
+                array.push_back(200);                     // { 100, 200 }
+                array.clear();                            // { }
+                array.push_back(300);                     // { 300 }
             }
             Assert::AreEqual<size_t>(1, array.size());
             Assert::AreEqual<int>(300, array[0]);
@@ -463,6 +478,7 @@ namespace ShosUndoRedoVectorTest
             array.push_back(200);
             array.undo();
 
+            // reset() discards both the elements and the undo / redo history.
             array.reset();
             Assert::AreEqual<size_t>(0, array.size());
             Assert::IsFalse(array.can_undo());
@@ -481,6 +497,7 @@ namespace ShosUndoRedoVectorTest
                 array.push_back(200);
                 Assert::ExpectException<std::logic_error>([&] { array.reset(); });
             }
+            // The failed reset() changed nothing, and the transaction is still recorded.
             Assert::AreEqual<size_t>(2, array.size());
             Assert::IsTrue(array.undo());
             Assert::AreEqual<size_t>(1, array.size());
@@ -492,7 +509,9 @@ namespace ShosUndoRedoVectorTest
             array1.push_back(100);
             array1.push_back(200);
 
+            // Move construction takes over both the elements and the undo history.
             undo_redo_vector<int> array2(std::move(array1));
+            // The moved-from collection is left empty.
             Assert::AreEqual<size_t>(0, array1.size());
             Assert::IsFalse(array1.can_undo());
             Assert::AreEqual<size_t>(2, array2.size());
@@ -502,6 +521,8 @@ namespace ShosUndoRedoVectorTest
 
             undo_redo_vector<int> array3;
             array3.push_back(300);
+            // Move assignment replaces the elements and history of array3 with those of array2,
+            // including the redo step left by the undo() above.
             array3 = std::move(array2);
             Assert::AreEqual<size_t>(1, array3.size());
             Assert::AreEqual<int>(100, array3[0]);
@@ -522,9 +543,11 @@ namespace ShosUndoRedoVectorTest
                 sum += value;
             Assert::AreEqual<int>(6, sum);
 
+            // Elements cannot be modified through iterators, since that would bypass the undo history.
             Assert::IsTrue((std::is_same_v<undo_redo_vector<int>::iterator, undo_redo_vector<int>::const_iterator>));
         }
 
+        // A non-random-access container can also be used as the underlying collection.
         TEST_METHOD(list_collection)
         {
             undo_redo_collection<int, std::list<int>> array;
@@ -546,6 +569,7 @@ namespace ShosUndoRedoVectorTest
             Assert::AreEqual<int>(300, array[2]);
         }
 
+        // Elements only need to be movable, not copyable.
         TEST_METHOD(move_only_element)
         {
             undo_redo_vector<std::unique_ptr<std::string>> array;
@@ -562,6 +586,7 @@ namespace ShosUndoRedoVectorTest
             Assert::IsTrue(*array[1] == "b");
         }
 
+        // Every element is cleaned up exactly once, whether it is in the collection or in the undo history.
         TEST_METHOD(clean_up_function)
         {
             int clean_up_count = 0;
@@ -588,6 +613,7 @@ namespace ShosUndoRedoVectorTest
                 array.redo();
                 array.redo();
             }
+            // Five foo objects were created, and all of them were deleted by the destructor or earlier.
             Assert::AreEqual<int>(5, clean_up_count);
             Assert::AreEqual<int>(0, foo::instance_count);
         }
@@ -600,6 +626,7 @@ namespace ShosUndoRedoVectorTest
             array.push_back(new foo(100));
             array.push_back(new foo(200));
             array.undo();
+            // foo(200) is out of the collection, but is still kept for redo.
             Assert::AreEqual<int>(0, clean_up_count);
 
             // Discards the redo step holding foo(200).
@@ -614,11 +641,13 @@ namespace ShosUndoRedoVectorTest
             Assert::AreEqual<int>(2, clean_up_count);
             Assert::AreEqual<int>(2, foo::instance_count);
 
+            // Cleans up foo(100) held by the erase step and foo(300) in the collection.
             array.reset();
             Assert::AreEqual<int>(4, clean_up_count);
             Assert::AreEqual<int>(0, foo::instance_count);
         }
 
+        // undo_redo_pointer_vector deletes the pointed objects without a user-supplied clean_up function.
         TEST_METHOD(pointer_vector)
         {
             {
@@ -657,6 +686,7 @@ namespace ShosUndoRedoVectorTest
         }
     };
 
+    // Tests of synchronized_undo_redo_collection (thread-safe).
     TEST_CLASS(synchronized_undo_redo_vector_test)
     {
     public:
@@ -672,11 +702,12 @@ namespace ShosUndoRedoVectorTest
             array.push_back(100);
             array.push_back(300);
 
-            Assert::IsTrue(array.insert(1, 200));
+            // Out-of-range indices are rejected with false instead of an exception.
+            Assert::IsTrue(array.insert(1, 200));         // { 100, 200, 300 }
             Assert::IsFalse(array.insert(4, 400));
-            Assert::IsTrue(array.update(0, 150));
+            Assert::IsTrue(array.update(0, 150));         // { 150, 200, 300 }
             Assert::IsFalse(array.update(3, 400));
-            Assert::IsTrue(array.erase(2));
+            Assert::IsTrue(array.erase(2));               // { 150, 200 }
             Assert::IsFalse(array.erase(2));
             Assert::IsTrue(array.snapshot() == std::vector<int>{ 150, 200 });
 
@@ -690,6 +721,7 @@ namespace ShosUndoRedoVectorTest
         TEST_METHOD(read_by_value)
         {
             synchronized_undo_redo_vector<int> array;
+            // Accessing a missing element returns std::nullopt instead of throwing.
             Assert::IsFalse(array.get(0).has_value());
             Assert::IsFalse(array.front().has_value());
             Assert::IsFalse(array.back().has_value());
@@ -700,6 +732,7 @@ namespace ShosUndoRedoVectorTest
             Assert::IsFalse(array.get(2).has_value());
             Assert::AreEqual<int>(100, *array.front());
             Assert::AreEqual<int>(200, *array.back());
+            // read() returns the result of the function, computed while the lock is held.
             Assert::AreEqual<int>(300, array.read([](const auto& collection) { return collection[0] + collection[1]; }));
         }
 
@@ -708,6 +741,7 @@ namespace ShosUndoRedoVectorTest
             synchronized_undo_redo_vector<int> array;
             array.push_back(100);
 
+            // Both modifications inside modify() become one undo step, and its result is returned.
             auto size = array.modify([](auto& collection) {
                 collection.push_back(200);
                 collection.erase(collection.begin());
@@ -719,7 +753,7 @@ namespace ShosUndoRedoVectorTest
             Assert::IsTrue(array.undo());
             Assert::IsTrue(array.snapshot() == std::vector<int>{ 100 });
 
-            // An empty modification does not create an undo step.
+            // An empty modification does not create an undo step, so undo() reverts the first push_back.
             array.modify([](auto&) {});
             Assert::IsTrue(array.undo());
             Assert::IsTrue(array.empty());
@@ -742,8 +776,11 @@ namespace ShosUndoRedoVectorTest
             Assert::IsFalse(array.can_redo());
         }
 
+        // Many threads modify and undo / redo at the same time.
+        // It must not crash, and every allocated element must be deleted exactly once.
         TEST_METHOD(concurrent_access)
         {
+            // Number of allocated but not yet deleted elements.
             std::atomic<int> live_count = 0;
             {
                 synchronized_undo_redo_collection<int*> array([&](int*& element) { delete element; live_count--; });
@@ -753,9 +790,10 @@ namespace ShosUndoRedoVectorTest
                 for (int thread_index = 0; thread_index < 8; thread_index++) {
                     threads.emplace_back([&, thread_index] {
                         for (int index = 0; index < 1000; index++) {
+                            // Each thread performs the operations in a different order.
                             switch ((index + thread_index) % 6) {
                             case 0: case 1: array.push_back(make(index)); break;
-                            case 2:         array.erase(0); break;
+                            case 2:         array.erase(0); break; // Returns false if empty, which is fine.
                             case 3:         array.undo(); break;
                             case 4:         array.redo(); break;
                             case 5:         array.modify([&](auto& collection) { collection.push_back(make(index)); collection.push_back(make(index)); }); break;
@@ -765,7 +803,7 @@ namespace ShosUndoRedoVectorTest
                 }
                 for (auto& thread : threads)
                     thread.join();
-            }
+            } // The destructor deletes the remaining elements and those held by the undo history.
             Assert::AreEqual<int>(0, live_count);
         }
     };

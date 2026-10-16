@@ -1,9 +1,13 @@
-﻿#include "../undo_redo_vector.h"
+﻿// Checks that undo_redo_vector does not leak the objects pointed to by its elements.
+// Run it in a debug build: leaks are reported to the debugger output and make the exit code 1.
+
+#include "../undo_redo_vector.h"
 // Include after the standard headers, since it redefines new.
 #include "MemoryLeakTest.h"
 
 using namespace shos;
 
+// A heap-allocated object whose leak would be detected.
 class foo
 {
     int value;
@@ -13,6 +17,7 @@ public:
     operator int() const { return value; }
 };
 
+// Checks that a lambda stored in std::function can delete an object (the mechanism used by clean_up).
 class function_test
 {
     std::function<void(foo*)> func;
@@ -35,6 +40,9 @@ void function_clean_up_test()
     function_test function_test1(clean_up);
 }
 
+// Uses a clean_up function to delete the objects.
+// The objects are moved in and out of the collection by undo / redo,
+// and some undo history is discarded, so every path that releases an element is exercised.
 void undo_redo_vector_memory_leak_test()
 {
     undo_redo_vector<foo*> array([](foo* foo) { delete foo; });
@@ -58,8 +66,9 @@ void undo_redo_vector_memory_leak_test()
     array.undo();
     array.redo();
     array.redo();
-}
+} // The destructor deletes the remaining objects, both in the collection and in the undo history.
 
+// The same scenario with undo_redo_pointer_vector, which deletes the objects by itself.
 void undo_redo_pointer_vector_memory_leak_test()
 {
     undo_redo_pointer_vector<foo> array;
@@ -94,6 +103,7 @@ int main()
     undo_redo_pointer_vector_memory_leak_test();
 
 #ifdef _DEBUG
+    // All the collections above have been destroyed here, so any remaining block is a leak.
     // Returns non-zero if any leak is detected, so that the result can be checked automatically.
     return _CrtDumpMemoryLeaks() ? 1 : 0;
 #else // _DEBUG
